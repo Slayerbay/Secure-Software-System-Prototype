@@ -1,0 +1,8 @@
+Flask==2.3.2
+Flask-WTF==1.1.1
+Flask-SQLAlchemy==3.0.5
+Flask-Login==0.6.2
+WTForms==3.0.1
+pycryptodome==3.19.0
+python-dotenv==1.0.0
+Werkzeug==2.3.8

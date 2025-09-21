@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Admin Panel - Manage User Roles</h2>
+<p>Logged in as: {{ current_user.username }} ({{ current_user.role }})</p>
+<hr>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Username</th>
+      <th>Current Role</th>
+      <th>Change Role</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for user in users %}
+    <tr>
+      <td>{{ user.username }}</td>
+      <td>{{ user.role }}</td>
+      <td>
+        {% if user.id != current_user.id %}
+          <form method="POST" action="{{ url_for('admin') }}">
+            {{ forms[user.id].hidden_tag() }}
+            {{ forms[user.id].user_id(value=user.id) }}
+            {{ forms[user.id].new_role(value=user.role) }}
+            {{ forms[user.id].submit(class="btn btn-primary btn-sm") }}
+          </form>
+        {% else %}
+          <em>Cannot change own role</em>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

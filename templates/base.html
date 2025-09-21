@@ -1,0 +1,43 @@
+<DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>{% block title %}Secure App{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
+</head>
+<body>
+    <section class="section">
+        <div class="container">
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="notification is-{{ category }}">{{ message }}</div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            {% if current_user.is_authenticated %}
+            <nav class="navbar mb-4" role="navigation">
+                <div class="navbar-menu is-active">
+                    <div class="navbar-start">
+                        <a class="navbar-item" href="{{ url_for('home') }}">Home</a>
+                        {% if current_user.role == 'admin' %}
+                        <a class="navbar-item" href="{{ url_for('admin') }}">Admin Dashboard</a>
+                        {% endif %}
+                    </div>
+                    <div class="navbar-end">
+                        <div class="navbar-item">
+                            Logged in as: <strong>{{ current_user.username }}</strong> | 
+                            <a href="{{ url_for('logout') }}">Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </section>
+</body>
+</html>
