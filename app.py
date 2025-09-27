@@ -30,9 +30,11 @@ raw_key = os.getenv("AES_SECRET_KEY")
 if not raw_key:
     raise ValueError("AES_SECRET_KEY environment variable is required")
 AES_SECRET_KEY = raw_key.strip()
+# Ensure key length is valid
 if len(AES_SECRET_KEY) not in (16, 24, 32):
     raise ValueError("AES_SECRET_KEY must be 16, 24, or 32 bytes long")
 
+# AES block size
 BLOCK_SIZE = 16
 
 # Define allowed roles explicitly
@@ -40,18 +42,25 @@ ALLOWED_ROLES = ['user', 'admin']
 
 # Encrypt password before storing
 def encrypt_password(plain_text):
+    # Create cipher
     cipher = AES.new(AES_SECRET_KEY.encode(), AES.MODE_CBC)
+    # Pad and encrypt
     ct_bytes = cipher.encrypt(pad(plain_text.encode(), BLOCK_SIZE))
+    # Encode IV and ciphertext to base64 for storage
     iv = b64encode(cipher.iv).decode('utf-8')
     ct = b64encode(ct_bytes).decode('utf-8')
     return iv + ":" + ct
 
 # Decrypt password for verification
 def decrypt_password(enc_text):
+    # Split the IV and ciphertext
     iv_str, ct_str = enc_text.split(":")
+    # Decode from base64
     iv = b64decode(iv_str)
     ct = b64decode(ct_str)
+    # Create cipher
     cipher = AES.new(AES_SECRET_KEY.encode(), AES.MODE_CBC, iv)
+    # Unpad and decode
     pt = unpad(cipher.decrypt(ct), BLOCK_SIZE)
     return pt.decode('utf-8')
 
@@ -78,7 +87,7 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 
-# Forms
+# Login form
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(min=3, max=80)])
     password = PasswordField('Password', validators=[DataRequired()])
@@ -90,7 +99,7 @@ class RegisterForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Register')
 
-
+# Form for changing user roles (admin only)
 class RoleChangeForm(FlaskForm):
     user_id = HiddenField('User ID', validators=[DataRequired()])
     new_role = SelectField('New Role', choices=[(r, r.capitalize()) for r in ALLOWED_ROLES], validators=[
@@ -142,8 +151,9 @@ def register():
         if existing_user:
             flash('Username already taken.', 'danger')
             return render_template('register.html', form=form)
-
+        
         encrypted_pw = encrypt_password(form.password.data)
+        #Random balance for demonstration purposes
         random_balance = round(random.uniform(0, 1000), 2)
 
         user = User(
@@ -162,10 +172,13 @@ def register():
 @app.route('/admin', methods=['GET', 'POST'])
 @login_required
 def admin():
+    # Check if current user is not an admin
     if current_user.role != 'admin':
         flash('Access denied: Admins only.', 'danger')
         return redirect(url_for('home'))
+        # If not admin, redirect to home
 
+    # Fetch all users
     users = User.query.order_by(User.username).all()
     forms = {}
 
