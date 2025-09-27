@@ -108,6 +108,11 @@ class RoleChangeForm(FlaskForm):
     ])
     submit = SubmitField('Update Role')
 
+# Form for deleting a user account (admin only)
+class AccountDeletionForm(FlaskForm):
+    user_id = HiddenField('User ID', validators=[DataRequired()])
+    submit = SubmitField('Delete Account')
+
 # Home route
 @app.route('/')
 @login_required
@@ -124,6 +129,7 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user and user.check_password(form.password.data):
+
             login_user(user)
             flash('Logged in successfully.', 'success')
             return redirect(url_for('home'))
@@ -172,39 +178,57 @@ def register():
 @app.route('/admin', methods=['GET', 'POST'])
 @login_required
 def admin():
-    # Check if current user is not an admin
     if current_user.role != 'admin':
         flash('Access denied: Admins only.', 'danger')
         return redirect(url_for('home'))
-        # If not admin, redirect to home
 
-    # Fetch all users
     users = User.query.order_by(User.username).all()
-    forms = {}
+    role_forms = {}
+    delete_forms = {}
 
     if request.method == 'POST':
-        user_id = request.form.get("user_id")
-        new_role = request.form.get("new_role")
+        # Handle role change
+        if 'new_role' in request.form:
+            user_id = request.form.get("user_id")
+            new_role = request.form.get("new_role")
 
-        if user_id and new_role:
+            if user_id and new_role:
+                user = User.query.get(int(user_id))
+                if user:
+                    if user.id == current_user.id:
+                        flash("You cannot change your own role.", "warning")
+                    else:
+                        user.role = new_role
+                        db.session.commit()
+                        flash(f"Role updated for {user.username} to {new_role}.", "success")
+                return redirect(url_for('admin'))
+
+        # Handle account deletion
+        elif 'delete_account' in request.form:
+            user_id = request.form.get("user_id")
             user = User.query.get(int(user_id))
             if user:
                 if user.id == current_user.id:
-                    flash("You cannot change your own role.", "warning")
+                    flash("You cannot delete your own account.", "warning")
                 else:
-                    user.role = new_role
+                    db.session.delete(user)
                     db.session.commit()
-                    flash(f"Role updated for {user.username} to {new_role}.", "success")
+                    flash(f"Account for {user.username} has been deleted.", "info")
             return redirect(url_for('admin'))
 
-    # Create a RoleChangeForm for each user
+    # Prepare forms for each user
     for user in users:
-        form = RoleChangeForm()
-        form.user_id.data = user.id
-        form.new_role.data = user.role
-        forms[user.id] = form
+        role_form = RoleChangeForm()
+        role_form.user_id.data = user.id
+        role_form.new_role.data = user.role
+        role_forms[user.id] = role_form
 
-    return render_template('admin.html', users=users, forms=forms)
+        delete_form = AccountDeletionForm()
+        delete_form.user_id.data = user.id
+        delete_forms[user.id] = delete_form
+
+    return render_template('admin.html', users=users, role_forms=role_forms, delete_forms=delete_forms)
+
 
 
 # Create DB and default admin user on first run
